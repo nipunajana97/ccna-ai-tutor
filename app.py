@@ -29,10 +29,21 @@ h1,h2,h3,h4,button,input,textarea,[data-testid="stMarkdownContainer"] {
 }
 h1,h2,h3 {letter-spacing:-.045em;}
 [data-testid="stMainBlockContainer"] {max-width:1000px;padding:1.4rem 2.6rem 8rem;}
-[data-testid="stHeader"] {background:transparent;pointer-events:none;}
-[data-testid="stHeader"] button {pointer-events:auto;}
+[data-testid="stHeader"] {background:transparent;}
 .stAppDeployButton {display:none;}
-[data-testid="stToolbar"] {display:none;}
+/* The native reopen button lives inside this toolbar; keep its container visible. */
+[data-testid="stToolbar"] {display:flex;}
+[data-testid="stExpandSidebarButton"] {
+ visibility:visible!important;opacity:1!important;pointer-events:auto!important;
+ background:#fff!important;border:1px solid #ccdce4!important;color:#17434a!important;
+ border-radius:10px;min-width:40px;min-height:40px;box-shadow:0 2px 9px #18394b0a;
+}
+[data-testid="stExpandSidebarButton"] * {color:#17434a!important;-webkit-text-fill-color:#17434a!important;}
+[data-testid="stExpandSidebarButton"]:hover {background:#e9f5f1!important;border-color:#68a89c!important;}
+[data-testid="stExpandSidebarButton"]:focus-visible {outline:3px solid #0b8b91;outline-offset:3px;}
+[data-testid="stSidebarCollapseButton"] {visibility:visible!important;opacity:1!important;}
+[data-testid="stSidebarCollapseButton"] button,
+[data-testid="stSidebarCollapseButton"] button * {color:#d5f5e9!important;-webkit-text-fill-color:#d5f5e9!important;}
 [data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] {gap:.8rem;}
 .brand {display:flex;align-items:center;gap:12px;margin:0 0 22px;color:#f3f8ff;}
 .brand-name {font-size:1.17rem;font-weight:720;letter-spacing:-.045em;line-height:1.2;}
