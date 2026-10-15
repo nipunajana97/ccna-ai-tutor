@@ -20,6 +20,7 @@ Python 3.12.14. Package versions are pinned in `requirements.txt`.
 - Stripe SDK 15 objects require conversion with `to_dict()` before dictionary-style `.get()` access.
 - Gemini SDK schema conversion rejects integer Literal enums; the correct answer index uses an integer with bounds 0–3 instead.
 - HTTPX proxy support required the `socks` extra in this execution environment; it is included in the pinned dependencies.
+- Local visual testing exposed unwanted Streamlit internal help output from standalone conditional expressions. Explicit `if`/`else` rendering fixes it in account status and answer feedback. The Streamlit workflow regression now rejects internal `help_info` elements.
 
 ## Pending external checks
 

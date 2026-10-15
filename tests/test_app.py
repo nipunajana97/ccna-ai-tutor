@@ -14,6 +14,7 @@ def test_local_demo_trial_answer_and_fresh_session_paywall(tmp_path, monkeypatch
     monkeypatch.delenv("RENDER", raising=False)
     app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=20).run()
     assert not app.exception
+    assert not app.get("help_info"), "Internal Streamlit objects must not appear in the UI"
     by_label(app.button, "Generate my scenario").click().run()
     assert not app.exception
     assert by_label(app.button, "Generate my scenario").disabled
@@ -21,6 +22,7 @@ def test_local_demo_trial_answer_and_fresh_session_paywall(tmp_path, monkeypatch
     app.radio[0].set_value(0)
     by_label(app.button, "Check my answer").click().run()
     assert not app.exception
+    assert not app.get("help_info"), "Answer feedback must not expose internal objects"
     assert by_label(app.button, "Check my answer").disabled
     fresh = AppTest.from_file(str(ROOT / "app.py"), default_timeout=20).run()
     assert not fresh.exception

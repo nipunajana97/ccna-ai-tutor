@@ -12,7 +12,7 @@ from tutor.knowledge import KnowledgeIndex, read_chunks
 st.set_page_config(page_title="CCNA Scenario Tutor", page_icon="🔷", layout="wide")
 settings = Settings.from_env()
 st.markdown("""<style>
- .block-container {max-width:1120px;padding-top:2rem;}
+ .block-container {max-width:1120px;padding-top:4rem;}
  .eyebrow {font-size:.78rem;letter-spacing:.14em;font-weight:700;color:#2563eb;}
  div[data-testid='stSidebar'] {background:#f1f5f9;}
  h1 {letter-spacing:-.035em;}
@@ -122,7 +122,10 @@ used = store.trial_used(identity.user_id)
 with st.sidebar:
     st.subheader("Your practice account")
     st.write(identity.email)
-    st.success("Subscriber access") if entitlement.active else st.info("Free scenario used" if used else "1 free scenario available")
+    if entitlement.active:
+        st.success("Subscriber access")
+    else:
+        st.info("Free scenario used" if used else "1 free scenario available")
     if billing_error:
         st.warning(billing_error)
     if not settings.demo and st.button("Refresh payment status"):
@@ -160,7 +163,10 @@ def reserve_request(kind):
 
 
 if used and not entitlement.active:
-    st.info("Your free scenario is saved below. Subscribe in the sidebar to generate another or ask the tutor.")
+    if settings.demo:
+        st.info("Your demo scenario is saved below. Scroll down to answer it and review the explanation. This local demo includes one scenario.")
+    else:
+        st.info("Your free scenario is saved below. Subscribe in the sidebar to generate another or ask the tutor.")
     if st.session_state.get("paywall_seen") != identity.user_id:
         store.event("paywall_view", identity.user_id)
         st.session_state.paywall_seen = identity.user_id
@@ -224,7 +230,10 @@ with practice:
                     st.rerun()
             if answered:
                 correct = latest["selected_answer"] == current.correct_index
-                st.success("Correct — nicely reasoned.") if correct else st.warning(f"The correct answer is {'ABCD'[current.correct_index]}.")
+                if correct:
+                    st.success("Correct — nicely reasoned.")
+                else:
+                    st.warning(f"The correct answer is {'ABCD'[current.correct_index]}.")
                 st.markdown(current.explanation)
                 for n, reason in enumerate(current.choice_explanations):
                     st.write(f"**{'ABCD'[n]}:** {reason}")

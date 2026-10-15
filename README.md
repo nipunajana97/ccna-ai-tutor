@@ -43,7 +43,7 @@ render.yaml               Paid Starter service + 1 GB persistent disk blueprint
 
 ## Run a local sample without API keys
 
-Use Python 3.12:
+Use Python 3.11 or 3.12. The commands below select 3.12:
 
 ```bash
 python -m venv .venv
@@ -63,6 +63,8 @@ python start.py
 ```
 
 Open http://localhost:8501. The demo has one fixed sample, consumes its own durable demo trial, and cannot unlock paid access. It makes no Google, Gemini, or Stripe calls. To reset this local sample, remove only the local `data/demo/` directory while the demo is stopped. `DEMO_MODE=true` is rejected in Render.
+
+If `py -3.12` refers to a missing executable on Windows, run `py -0p` to inspect registered installations. When a valid Python 3.11 is listed, create the environment with `py -3.11 -m venv .venv`. The pinned direct dependencies allow Python 3.11. Continue with `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` and `.\.venv\Scripts\python.exe start.py` after setting `DEMO_MODE=true`.
 
 ## Run with real integrations in Stripe test mode
 
