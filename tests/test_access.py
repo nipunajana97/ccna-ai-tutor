@@ -33,7 +33,7 @@ def test_one_trial_survives_restart_and_failed_retry(tmp_path):
     fresh = UsageStore(path, cooldown_seconds=0)
     assert fresh.trial_used("learner")
     assert fresh.latest_scenario("learner")["id"] == second
-    with pytest.raises(AccessDenied, match="free scenario"):
+    with pytest.raises(AccessDenied, match="free response"):
         fresh.reserve("learner", False)
 
 
@@ -69,9 +69,13 @@ def test_subscriber_allowed_then_cancellation_blocks_new_requests(tmp_path):
         store.reserve("u", False)
 
 
-def test_chat_not_available_as_free_trial(tmp_path):
-    with pytest.raises(AccessDenied):
-        UsageStore(tmp_path / "quota.db").reserve("u", False, "chat")
+def test_first_chat_is_free_and_shares_trial_with_scenarios(tmp_path):
+    store = UsageStore(tmp_path / "quota.db", cooldown_seconds=0)
+    request = store.reserve("u", False, "chat")
+    store.complete(request, "u")
+    for kind in ("scenario", "chat"):
+        with pytest.raises(AccessDenied, match="Subscribe"):
+            store.reserve("u", False, kind)
 
 
 def test_ownership_and_single_answer(tmp_path):

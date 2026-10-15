@@ -80,17 +80,17 @@ Streamlit binds to `0.0.0.0` and Render's `PORT` automatically. The embedded sto
 
 Use Stripe sandbox only:
 
-1. Open the live Render URL in Incognito and check the sample preview.
-2. Sign in with a test Google user. Confirm “1 free scenario available.”
-3. Generate a subnetting scenario. Choose an answer and verify the explanation against a manual calculation.
-4. Try another scenario: it must be blocked. Refresh, open another tab, and sign in again: it must remain blocked.
+1. Open the live Render URL in Incognito and check the chat welcome/sign-in screen.
+2. Sign in with a test Google user. Confirm “1 free prompt.”
+3. Type “Explain the network and broadcast addresses for 192.168.10.77/26.” Confirm the answer streams, includes references, and agrees with a manual calculation.
+4. Confirm the upgrade card appears after that response and the composer is disabled. Refresh, open another tab, sign in again, and choose New chat: further prompts must remain blocked. The saved answer must remain readable in Recent chats.
 5. Press “Subscribe · $9/month.” Complete test checkout using the **same Google email**, test card `4242 4242 4242 4242`, any future expiry, and any valid test CVC. Do not use real card details in test mode.
-6. Return and refresh payment status. The sidebar must show subscriber access.
-7. Generate one OSPF/routing scenario to exercise real Gemini retrieval and structured generation; check the answer and sources.
-8. Ask a supported CCNA question in tutor chat and confirm text streams.
+6. Return and press “I've paid · Refresh access.” The sidebar must show subscriber access and the composer must unlock.
+7. Ask “Why is that the broadcast address?” Verify the reply follows the existing conversation rather than treating the question in isolation.
+8. Start a new chat, request an original OSPF scenario, and check the answer and reference excerpts. Return to the original chat using the sidebar.
 9. Open “Manage subscription” and verify the Stripe portal works. Test canceling immediately and verify new requests stop. Test cancellation at period end separately: access should remain while Stripe still reports the subscription as active.
-10. Use a second Google account with no purchase; it must not get subscriber access. A subscription for another price must not unlock access either.
-11. Restart/redeploy the Render service. Verify saved trials/scenarios survive, then verify backup and recovery of the data disk.
+10. Use a second Google account with no purchase; it must not get subscriber access or see the first account's conversations. A subscription for another price must not unlock access either.
+11. Restart/redeploy the Render service. Verify saved trials/chats survive, then verify backup and recovery of the data disk.
 12. Compare local funnel counts with Stripe test subscription reports. Outgoing button clicks and completed paid conversions are different metrics.
 
 These live checks are still pending. Local automated tests do not establish that external credentials, OAuth callbacks, model entitlement, or customer portal settings are configured correctly.

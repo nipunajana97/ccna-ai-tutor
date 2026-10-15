@@ -35,8 +35,16 @@ def test_real_gemini_sdk_embeddings_schema_and_sse(monkeypatch):
         assert math.isclose(sum(value * value for value in embeddings[0]), 1.0)
         chunk = Chunk("s1-c0", "1", "Subnetting", "Subnet boundaries.", "https://www.rfc-editor.org/rfc/rfc3021")
         assert tutor.scenario("Subnetting", "Foundation", "", [chunk]) == scenario
-        assert "".join(tutor.stream_answer("Explain a subnet", [chunk])) == "A subnet has a boundary."
+        history = [{"role": "user", "content": "What is a subnet?"},
+                   {"role": "assistant", "content": "A logical IP network."}]
+        assert "".join(tutor.stream_answer("Explain a subnet", [chunk], history=history)) == "A subnet has a boundary."
         generation = next(body for path, body in sent if path.endswith(":generateContent"))
         assert generation["generationConfig"]["responseMimeType"] == "application/json"
+        chat = next(body for path, body in sent if path.endswith(":streamGenerateContent"))
+        assert [item["role"] for item in chat["contents"]] == ["user", "model", "user"]
+        assert chat["contents"][1]["parts"][0]["text"] == "A logical IP network."
+        latest = json.loads(chat["contents"][-1]["parts"][0]["text"])
+        assert latest["question"] == "Explain a subnet"
+        assert "[s1-c0]" in latest["reference_excerpts"]
     finally:
         client.close()

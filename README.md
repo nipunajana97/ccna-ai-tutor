@@ -1,6 +1,6 @@
 # CCNA Exam Scenario Tutor
 
-A Streamlit micro-SaaS for **focused CCNA 200-301 v1.1 practice**. One free scenario per verified Google account, then a Stripe subscription. No GPU or local model weights are needed.
+A Streamlit micro-SaaS for **focused CCNA 200-301 v1.1 practice**. One free chat response per verified Google account, then a Stripe subscription. No GPU or local model weights are needed.
 
 Repository: https://github.com/nipunajana97/ccna-ai-tutor
 
@@ -10,8 +10,12 @@ Repository: https://github.com/nipunajana97/ccna-ai-tutor
 - Gemini API document/query embeddings and current `google-genai` SDK.
 - Configurable generation model, default `gemini-3.8-flash` per Google's October 2026 documentation.
 - `gemini-embedding-001` with normalized 768-dimensional vectors and retrieval task types. Changing the embedding model rebuilds the index into a separate collection. The code currently expects this model's task-type semantics; do not switch to Embedding 2 without adapting them.
-- Deterministic /25–/30 IPv4 subnet scenarios: Python computes every numerical answer.
-- Original AI multiple-choice scenarios, feedback for every option, references, and subscriber-only streaming explanations.
+- ChatGPT-style conversation layout: saved chats in the sidebar, starter prompts, streamed answers, and a bottom message composer.
+- First chat response free; the conversation remains readable when the subscription gate appears.
+- Follow-up answers use recent conversation context and retrieved references.
+- Persisted conversation history and source excerpts, isolated by authenticated account.
+- Original practice scenarios can be requested directly in chat. AI answers, including numerical answers, need review against the reference.
+- A separately tested deterministic /25–/30 IPv4 scenario engine remains available in the Python module; it does not verify arbitrary chat calculations.
 - Google OIDC authentication, strict verified-email checks, and exact-price active Stripe subscription checks.
 - One trial stored by Google subject ID; refreshes and simultaneous browser tabs do not create extra trials.
 - Stripe customer portal access for managing/canceling subscriptions (the portal must be enabled in Stripe).
@@ -20,17 +24,18 @@ Repository: https://github.com/nipunajana97/ccna-ai-tutor
 
 ## Important scope decisions
 
-1. **The free scenario requires sign-in.** Anonymous/session-only counters reset when a browser session is replaced. A verified account provides a durable identity for a one-scenario trial. The public page includes a fixed sample before sign-in.
-2. **Email typing is not authentication.** Subscription lookup uses the email in the verified Google identity token. Checkout must use that same email. No sidebar email textbox can unlock access.
-3. **Subscriber allowance defaults to 100 requests/day**, shared between scenarios and chat, rather than an unbounded API bill. A global ceiling defaults to 500 attempts/day. These are request-count controls, not dollar-denominated spend guarantees. Review pricing and set budgets in the Gemini account too.
-4. **Only active subscriptions with a paid latest invoice for the configured price unlock new requests.** Canceled, incomplete, unpaid, past-due, trialing, wrong-price, and wrong-mode subscriptions do not. Scheduled cancellation remains active until Stripe changes its status at period end. Billing failures fail closed.
-5. This MVP **polls Stripe directly**; it does not require a webhook server. Sidebar status can cache for 30 seconds, but every generation/chat request rechecks Stripe without that display cache. Use “Refresh payment status” after checkout.
-6. The reference is **not full exam coverage**. It omits IPv6, wireless, many IP services and other blueprint material. AI output is not guaranteed correct merely because it uses retrieval.
+1. **The free prompt requires sign-in.** A verified account provides a durable identity for a one-response trial. Refreshing, opening another tab, or choosing New chat does not reset the allowance. Existing consumed scenario trials remain consumed after upgrading this interface.
+2. **Delivered responses consume the trial.** A failure before useful text is returned leaves the free prompt available. A partially delivered response is saved, marked interrupted, and counts as the free response.
+3. **Email typing is not authentication.** Subscription lookup uses the email in the verified Google identity token. Checkout must use that same email. No sidebar email textbox can unlock access.
+4. **Subscriber allowance defaults to 100 requests/day** for prompts and follow-ups. A global ceiling defaults to 500 attempts/day. These are request-count controls, not dollar-denominated spend guarantees. Review pricing and set budgets in the Gemini account too.
+5. **Only active subscriptions with a paid latest invoice for the configured price unlock new requests.** Canceled, incomplete, unpaid, past-due, trialing, wrong-price, and wrong-mode subscriptions do not. Scheduled cancellation remains active until Stripe changes its status at period end. Billing failures fail closed.
+6. This MVP **polls Stripe directly**; it does not require a webhook server. Sidebar status can cache for 30 seconds, but every chat request rechecks Stripe without that display cache. Use “I've paid · Refresh access” after checkout.
+7. The reference is **not full exam coverage**. It omits IPv6, wireless, many IP services and other blueprint material. AI output is not guaranteed correct merely because it uses retrieval.
 
 ## Project layout
 
 ```text
-app.py                     Streamlit interface and authenticated request flow
+app.py                     Chat interface and authenticated request flow
 start.py                   OIDC environment bootstrap and Render entry point
 ccna_knowledge.txt         Reviewed starter reference
 tutor/                    Identity, billing, quota, retrieval and model services
@@ -43,7 +48,7 @@ render.yaml               Paid Starter service + 1 GB persistent disk blueprint
 
 ## Run a local sample without API keys
 
-Use Python 3.11 or 3.12. The commands below select 3.12:
+Use Python 3.11 or 3.12:
 
 ```bash
 python -m venv .venv
@@ -55,14 +60,13 @@ DEMO_MODE=true python start.py
 On Windows PowerShell:
 
 ```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+py -3.11 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 $env:DEMO_MODE="true"
-python start.py
+.\.venv\Scripts\python.exe start.py
 ```
 
-Open http://localhost:8501. The demo has one fixed sample, consumes its own durable demo trial, and cannot unlock paid access. It makes no Google, Gemini, or Stripe calls. To reset this local sample, remove only the local `data/demo/` directory while the demo is stopped. `DEMO_MODE=true` is rejected in Render.
+Open http://localhost:8501. The demo accepts one prompt, displays a curated offline example, and then shows the subscription gate. These examples are not Gemini responses, and the demo cannot unlock paid access. It makes no Google, Gemini, or Stripe calls. Use **Restart local preview** in the sidebar to try again with a separate temporary preview identity. This does not delete history or reset real account trials. The default demo trial survives refreshes in `data/demo/`. `DEMO_MODE=true` is rejected in Render.
 
 If `py -3.12` refers to a missing executable on Windows, run `py -0p` to inspect registered installations. When a valid Python 3.11 is listed, create the environment with `py -3.11 -m venv .venv`. The pinned direct dependencies allow Python 3.11. Continue with `.\.venv\Scripts\python.exe -m pip install -r requirements.txt` and `.\.venv\Scripts\python.exe start.py` after setting `DEMO_MODE=true`.
 
@@ -96,7 +100,7 @@ python manage.py
 
 ## Deployment status and verification limits
 
-This package has been tested locally with real Chroma persistence, Streamlit's test runner, deterministic subnet cases, and mocked billing responses. Google login, paid Gemini generations, real Stripe checkout/portal, and Render deployment require credentials and have **not** been verified end to end here.
+This package has been tested locally with real Chroma persistence, Streamlit's test runner, first-prompt gating, saved conversations, interrupted-stream recovery, deterministic engine cases, and mocked billing responses. Google login, paid Gemini generations, real Stripe checkout/portal, and Render deployment require credentials and have **not** been verified end to end here.
 
 The blueprint is prepared, not applied. It creates paid compute/storage if applied. Use one instance with its attached disk; SQLite/embedded Chroma are not a multi-instance architecture. Back up the disk and test a restore before depending on it. The dependency versions are pinned to the packages installed for this build; dependencies should be reviewed periodically.
 

@@ -29,6 +29,16 @@ class UsageStore:
               );
               CREATE INDEX IF NOT EXISTS requests_user ON requests(user_id, created);
               CREATE TABLE IF NOT EXISTS events (name TEXT NOT NULL, user_id TEXT, created REAL NOT NULL);
+              CREATE TABLE IF NOT EXISTS conversations (
+                id TEXT PRIMARY KEY, user_id TEXT NOT NULL, title TEXT NOT NULL, updated REAL NOT NULL
+              );
+              CREATE INDEX IF NOT EXISTS conversations_user ON conversations(user_id, updated);
+              CREATE TABLE IF NOT EXISTS chat_turns (
+                request_id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL, user_id TEXT NOT NULL,
+                question TEXT NOT NULL, answer TEXT NOT NULL, refs TEXT NOT NULL,
+                interrupted INTEGER NOT NULL DEFAULT 0, created REAL NOT NULL
+              );
+              CREATE INDEX IF NOT EXISTS turns_conversation ON chat_turns(conversation_id, created);
             """)
 
     @contextmanager
@@ -47,6 +57,8 @@ class UsageStore:
             return bool(row and row[0])
 
     def reserve(self, user_id, subscribed, kind="scenario", now=None):
+        if kind not in {"scenario", "chat"}:
+            raise ValueError("Unknown request kind")
         now = time.time() if now is None else now
         with self.connection() as db:
             db.execute("BEGIN IMMEDIATE")
@@ -57,8 +69,8 @@ class UsageStore:
                 if db.execute("SELECT 1 FROM requests WHERE user_id=? AND status='pending'", (user_id,)).fetchone():
                     raise AccessDenied("A request is already running. Please wait.")
                 if not subscribed:
-                    if kind != "scenario" or db.execute("SELECT trial_used FROM users WHERE id=?", (user_id,)).fetchone()[0]:
-                        raise AccessDenied("Your free scenario has been used. Subscribe to continue.")
+                    if db.execute("SELECT trial_used FROM users WHERE id=?", (user_id,)).fetchone()[0]:
+                        raise AccessDenied("Your free response has been used. Subscribe to continue.")
                 today = int(now // 86400) * 86400
                 if db.execute("SELECT COUNT(*) FROM requests WHERE created>=?", (today,)).fetchone()[0] >= self.global_daily_limit:
                     raise AccessDenied("The tutor has reached today's service limit. Please try tomorrow.")
@@ -81,17 +93,64 @@ class UsageStore:
         with self.connection() as db:
             db.execute("BEGIN IMMEDIATE")
             try:
-                row = db.execute("SELECT trial FROM requests WHERE id=? AND user_id=? AND status='pending'", (request_id, user_id)).fetchone()
-                if row is None:
-                    raise AccessDenied("This request is no longer active. Please refresh.")
-                db.execute("UPDATE requests SET status='complete',payload=? WHERE id=?", (json.dumps(payload) if payload else None, request_id))
-                if row[0]:
-                    db.execute("UPDATE users SET trial_used=1 WHERE id=?", (user_id,))
-                db.execute("INSERT INTO events VALUES (?,?,?)", ("request_complete", user_id, time.time()))
+                self._finish(db, request_id, user_id, payload)
                 db.execute("COMMIT")
             except BaseException:
                 db.execute("ROLLBACK")
                 raise
+
+    @staticmethod
+    def _finish(db, request_id, user_id, payload=None):
+        row = db.execute("SELECT trial FROM requests WHERE id=? AND user_id=? AND status='pending'", (request_id, user_id)).fetchone()
+        if row is None:
+            raise AccessDenied("This request is no longer active. Please refresh.")
+        db.execute("UPDATE requests SET status='complete',payload=? WHERE id=?", (json.dumps(payload) if payload else None, request_id))
+        if row[0]:
+            db.execute("UPDATE users SET trial_used=1 WHERE id=?", (user_id,))
+        db.execute("INSERT INTO events VALUES (?,?,?)", ("request_complete", user_id, time.time()))
+
+    def complete_chat(self, request_id, user_id, conversation_id, question, answer, references, interrupted=False):
+        """Save both messages and consume the trial in the same transaction."""
+        if not question.strip() or not answer.strip():
+            raise ValueError("A chat turn needs a question and a response")
+        with self.connection() as db:
+            db.execute("BEGIN IMMEDIATE")
+            try:
+                owner = db.execute("SELECT user_id FROM conversations WHERE id=?", (conversation_id,)).fetchone()
+                if owner and owner[0] != user_id:
+                    raise AccessDenied("This conversation is not available.")
+                request = db.execute("SELECT kind FROM requests WHERE id=? AND user_id=?", (request_id, user_id)).fetchone()
+                if not request or request[0] != "chat":
+                    raise AccessDenied("This chat request is not available.")
+                self._finish(db, request_id, user_id)
+                now = time.time()
+                title = " ".join(question.split())[:64]
+                db.execute("INSERT OR IGNORE INTO conversations VALUES (?,?,?,?)", (conversation_id, user_id, title, now))
+                db.execute("UPDATE conversations SET updated=? WHERE id=? AND user_id=?", (now, conversation_id, user_id))
+                db.execute("INSERT INTO chat_turns VALUES (?,?,?,?,?,?,?,?)",
+                           (request_id, conversation_id, user_id, question[:1200], answer, json.dumps(references), int(interrupted), now))
+                db.execute("COMMIT")
+            except BaseException:
+                db.execute("ROLLBACK")
+                raise
+
+    def conversations(self, user_id, limit=20):
+        with self.connection() as db:
+            return [dict(row) for row in db.execute(
+                "SELECT id,title FROM conversations WHERE user_id=? ORDER BY updated DESC LIMIT ?", (user_id, limit))]
+
+    def messages(self, conversation_id, user_id, limit=50):
+        with self.connection() as db:
+            rows = db.execute("""SELECT question,answer,refs,interrupted FROM (
+                SELECT question,answer,refs,interrupted,created,rowid AS turn_order FROM chat_turns
+                WHERE conversation_id=? AND user_id=? ORDER BY created DESC, rowid DESC LIMIT ?
+              ) ORDER BY created ASC, turn_order ASC""", (conversation_id, user_id, limit)).fetchall()
+        messages = []
+        for row in rows:
+            messages.append({"role": "user", "content": row["question"]})
+            messages.append({"role": "assistant", "content": row["answer"],
+                             "references": json.loads(row["refs"]), "interrupted": bool(row["interrupted"])})
+        return messages
 
     def fail(self, request_id, user_id):
         with self.connection() as db:
