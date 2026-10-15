@@ -1,0 +1,91 @@
+=== CCNA 200-301 v1.1: FOCUSED PRACTICE REFERENCE ===
+Revision: 2026-10-15. This is a focused starter reference, not the complete exam blueprint.
+Questions are original practice material. CCNA is a Cisco trademark; this tutor is independent.
+
+[SECTION 1: IP ADDRESSING & SUBNETTING SHORTCUTS]
+For ordinary IPv4 LAN subnets, usable hosts = 2^(32-prefix length) minus 2.
+The network address has all host bits zero; the broadcast address has all host bits one.
+Magic number: 256 minus the mask's interesting octet gives the block size in that octet.
+The following subnet counts assume the parent network is a /24. They are NOT universal counts.
+- /25: mask 255.255.255.128; block 128; 2 child subnets per /24; 126 usable hosts each.
+- /26: mask 255.255.255.192; block 64; 4 child subnets per /24; 62 usable hosts each.
+- /27: mask 255.255.255.224; block 32; 8 child subnets per /24; 30 usable hosts each.
+- /28: mask 255.255.255.240; block 16; 16 child subnets per /24; 14 usable hosts each.
+- /29: mask 255.255.255.248; block 8; 32 child subnets per /24; 6 usable hosts each.
+- /30: mask 255.255.255.252; block 4; 64 child subnets per /24; 2 usable hosts each.
+- /31: mask 255.255.255.254; RFC 3021 point-to-point addressing permits both addresses as endpoints without separate network/broadcast addresses. Do not apply the ordinary minus-two LAN formula.
+- /32: mask 255.255.255.255; identifies one IPv4 address, commonly a host route or a loopback address.
+
+Wildcard masks invert every bit of a subnet mask: subtract each mask octet from 255.
+- /24 -> 0.0.0.255; /26 -> 0.0.0.63; /27 -> 0.0.0.31; /28 -> 0.0.0.15; /30 -> 0.0.0.3.
+In an ACL wildcard, zero bits must match and one bits are ignored. ACL wildcards can be noncontiguous; a subnet mask cannot.
+
+[SECTION 2: ROUTE INSTALLATION, FORWARDING & ADMINISTRATIVE DISTANCE]
+Separate routing-table construction from packet forwarding.
+During route installation, routing protocols select their best paths using their own metrics. When different sources offer the SAME destination prefix and prefix length, the lower administrative distance is preferred. Metrics from different protocols are not directly comparable.
+During forwarding, compare the packet's destination with routes ALREADY INSTALLED in the routing table. The matching route with the longest prefix is selected. A matching /28 beats a matching /24, regardless of the two routes' administrative distances. The /24 and /28 can coexist because they describe different prefixes.
+If a scenario lists candidate routes rather than an installed routing table, establish which candidates can be installed first; then perform longest-prefix matching.
+
+Common DEFAULT Cisco administrative distances (configurable; some protocols below are background context beyond the main CCNA routing scope):
+- Connected 0; static 1; external BGP 20; internal EIGRP 90; OSPF 110; IS-IS 115; RIP 120; external EIGRP 170; internal BGP 200.
+- AD 255 means the route is not installed. It does NOT mean that all discard routes have AD 255.
+- A static route to Null0 is a discard route and normally retains the static-route default AD of 1 unless changed.
+- A floating static route uses a higher AD than the preferred competing route for the same prefix. Example: ip route 0.0.0.0 0.0.0.0 192.168.1.2 115 floats behind an installed OSPF default route (AD 110). The next hop must be reachable.
+- Equal-cost paths can be installed when the protocol/platform supports them. State assumptions if only one next hop is requested.
+
+[SECTION 3: OSPFv2]
+OSPFv2 is a link-state IPv4 routing protocol using a shortest-path-first calculation.
+Default Cisco reference bandwidth is 100 Mbps: interface cost is reference bandwidth divided by interface bandwidth, with a minimum integer cost of 1. Route cost sums outgoing interface costs. The reference bandwidth and individual interface costs can be configured; assume defaults only when stated. Gigabit links can share cost 1 with Fast Ethernet under the default reference bandwidth.
+Multicast: 224.0.0.5 is AllSPFRouters; 224.0.0.6 is AllDRouters.
+Router ID selection when the process selects its ID: explicit router-id; otherwise highest IPv4 loopback address; otherwise highest eligible active interface IPv4 address. It is an identifier, not a requirement to use an address on the OSPF link. A later higher address does not automatically replace an existing router ID.
+
+Broadcast and NBMA network types elect a DR/BDR; point-to-point network types do not.
+Priority range is 0-255, default 1. Priority 0 makes that interface ineligible for DR/BDR. Among eligible election candidates, higher priority wins and higher router ID breaks a tie.
+Election is nonpreemptive. A newly arriving higher-priority router does not displace an existing DR. A DR failure or another event causing a new election can change the roles; restarting the entire process is not the only trigger.
+Common neighbor progression: Down, Init, Two-Way, ExStart, Exchange, Loading, Full. Attempt is an additional state used on certain NBMA configurations, so 'exactly seven states in every deployment' is incorrect.
+On a broadcast LAN, DROther peers normally remain Two-Way with each other; they form Full adjacencies with the DR and BDR. Two-Way is not automatically a fault.
+
+Neighbor checks include compatible area and area type, hello/dead timers, authentication when enabled, unique router IDs, connectivity, and compatible network settings. On broadcast links, subnet/mask agreement is required; do not generalize this mask rule to every OSPF network type.
+Default broadcast hello/dead timers are 10/40 seconds. OSPF process IDs are locally significant and do not need to match between routers.
+An MTU mismatch commonly prevents database-description exchange and leaves neighbors in ExStart/Exchange unless MTU checking is explicitly bypassed. Diagnose the mismatch; bypassing the check is not the default remedy.
+
+[SECTION 4: SWITCHING, VLANs & SPANNING TREE]
+802.1Q adds a 4-byte VLAN tag. On a typical Cisco 802.1Q trunk, native-VLAN traffic is untagged by default. Native tagging can be configured on supported platforms. VLAN 1 is the default native VLAN; both ends should agree. A mismatch can cause incorrect VLAN delivery and CDP warnings. VLAN-hopping attacks also depend on configuration and attack conditions; a mismatch alone is not a complete attack description.
+
+DTP assumes compatible Cisco ports and no other configuration conflict:
+- Desirable + desirable: trunk; desirable + auto: trunk; auto + auto: no negotiated trunk.
+- Static trunk + dynamic auto/desirable: the dynamic side can negotiate a trunk when DTP is sent.
+- Static trunk + static trunk: trunk.
+- Static access + static trunk: configuration mismatch. The access side remains access; it is NOT a correctly formed two-ended trunk.
+- switchport nonegotiate stops DTP transmission. For a deliberate static trunk without DTP, configure trunk mode on BOTH ends and disable negotiation where supported.
+
+802.1D STP and IEEE 802.1w RSTP are related but different. Rapid PVST+ is Cisco's per-VLAN implementation based on RSTP.
+With the extended system ID, the bridge ID includes configurable priority, VLAN/system ID, and MAC address. Default configurable priority is 32768 and changes in increments of 4096. Lowest bridge ID wins the root election in that spanning-tree instance.
+Each non-root switch selects a root port with the best path to the root in that instance; lowest root path cost is the first criterion, followed by bridge/port tie-breakers. Each segment selects a designated port. Avoid assuming that every root-switch port is designated in unusual same-switch/shared-segment topologies; specify a conventional point-to-point topology in practice questions.
+
+PortFast is for edge host ports; with classic STP it avoids listening/learning before forwarding. It does not switch STP off.
+BPDU Guard err-disables an interface when a BPDU arrives and guard is enabled. Global PortFast BPDU Guard applies to operational PortFast ports; interface-level BPDU Guard can also be explicitly configured.
+Root Guard blocks an unexpected superior BPDU in root-inconsistent state rather than accepting a new downstream root.
+Loop Guard can keep a non-designated port in loop-inconsistent state when expected BPDUs disappear, reducing the risk of an unintended forwarding transition. It is not a replacement for all unidirectional-link detection.
+
+[SECTION 5: SECURITY & IPv4 ACLs]
+Standard IPv4 ACLs match source IPv4 addresses. Number ranges: 1-99 and 1300-1999. Place near the destination as a common design guideline, after considering actual traffic requirements.
+Extended IPv4 ACLs can match source/destination addresses, protocol, and TCP/UDP port fields. Number ranges: 100-199 and 2000-2699. Place near the source as a common design guideline.
+ACL entries are evaluated in order; the first matching entry decides the action. An IPv4 ACL has an implicit deny at its end. For an extended IPv4 ACL the conceptual implicit entry is deny ip any any. Interface direction (in/out) is relative to the router interface and must be stated.
+Wildcard zero bits must match; one bits are ignored. An ACL that is created but not applied does not automatically filter an interface.
+
+Port security violation modes on supported switch interfaces:
+- Protect drops traffic from unauthorized source MACs without incrementing the violation counter or issuing violation notifications.
+- Restrict drops the traffic and increments the violation counter; logging/SNMP notifications depend on configuration/platform.
+- Shutdown is the common default: a violation err-disables the interface and updates the violation counter; notifications can be generated.
+DHCP snooping classifies ports as trusted/untrusted, filters inappropriate DHCP server messages on untrusted ports, and builds a binding database.
+Dynamic ARP Inspection validates ARP received on untrusted interfaces using bindings and configured validation rules. Static-address hosts may need static bindings or ARP ACL treatment; the absence of a dynamic lease does not prove malicious traffic.
+
+[SECTION 6: AUTOMATION, AI & NETWORK MANAGEMENT]
+Ansible generally controls network devices without installing an agent on them. SSH/CLI and supported network APIs/transports can be used; playbooks use YAML. Do not assume SSH is its only possible transport.
+Terraform is declarative infrastructure as code, commonly written in HCL. Providers interact with supported platforms/APIs; state tracks managed resources and must be protected because it can contain sensitive data.
+REST-style APIs commonly use GET to retrieve, POST to create or invoke an operation, PUT to replace a target representation, PATCH to update part of it, and DELETE to remove it. Endpoint documentation defines exact behavior.
+Authentication can include Basic authentication over TLS, API keys, bearer access tokens, or OAuth 2.0 flows. An API key and an OAuth bearer access token are not necessarily the same kind of credential. Never include real secrets in sample configurations.
+Generative AI can draft CLI, propose checks, and summarize logs, but generated configurations require review and testing. It does not inherently verify that its proposed command is valid.
+Predictive AI/ML uses telemetry and patterns to estimate future conditions or detect anomalies. Predictions are probabilistic, not guaranteed advance detection of hardware failure.
+The CCNA v1.1 blueprint includes generative/predictive AI and configuration-management tools including Ansible and Terraform. This small reference omits many other blueprint areas; do not advertise full exam coverage.

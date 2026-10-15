@@ -1,0 +1,8 @@
+{
+  "1": {"title": "IPv4 point-to-point /31 addressing", "url": "https://www.rfc-editor.org/rfc/rfc3021"},
+  "2": {"title": "Cisco route selection", "url": "https://www.cisco.com/c/en/us/support/docs/ip/enhanced-interior-gateway-routing-protocol-eigrp/8651-21.html"},
+  "3": {"title": "Cisco OSPF ExStart/Exchange troubleshooting", "url": "https://www.cisco.com/c/en/us/support/docs/ip/open-shortest-path-first-ospf/13684-12.html"},
+  "4": {"title": "Cisco Rapid Spanning Tree", "url": "https://www.cisco.com/c/en/us/support/docs/lan-switching/spanning-tree-protocol/24062-146.html"},
+  "5": {"title": "Cisco ACL overview", "url": "https://www.cisco.com/c/en/us/support/docs/ip/access-lists/26448-ACLsamples.html"},
+  "6": {"title": "CCNA v1.1 exam topic blueprint", "url": "https://learningcontent.cisco.com/documents/marketing/exam-topics/200-301-CCNA-v1.1.pdf"}
+}

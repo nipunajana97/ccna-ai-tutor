@@ -1,0 +1,40 @@
+# This blueprint provisions paid compute plus a disk. Review Render's cost before applying.
+services:
+  - type: web
+    name: ccna-ai-tutor
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: python start.py
+    healthCheckPath: /_stcore/health
+    disk:
+      name: ccna-tutor-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.14
+      - key: DEMO_MODE
+        value: "false"
+      - key: DATA_DIR
+        value: /var/data/ccna
+      - key: BILLING_MODE
+        value: test
+      - key: GEMINI_MODEL
+        value: gemini-3.8-flash
+      - key: GEMINI_EMBEDDING_MODEL
+        value: gemini-embedding-001
+      - key: STRIPE_PRICE_ID
+        value: price_1UQdZaCvG4xAhKW62tQteiuU
+      - key: STRIPE_PAYMENT_LINK
+        value: https://buy.stripe.com/test_aFa7sKfRceuj6BsfQk6wE00
+      - key: AUTH_COOKIE_SECRET
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false

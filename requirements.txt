@@ -1,0 +1,8 @@
+streamlit[auth]==1.66.0
+chromadb==1.5.9
+google-genai==1.75.0
+stripe==15.6.1
+pydantic==2.14.1
+python-dotenv==1.2.4
+tomli-w==1.2.0
+httpx[socks]==0.28.1
