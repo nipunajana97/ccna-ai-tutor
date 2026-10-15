@@ -4,12 +4,17 @@ Python 3.12.14. Package versions are pinned in `requirements.txt`.
 
 ## Results
 
-- `python -m pytest -q`: **41 passed**.
+- `python -m pytest -q`: **70 passed**.
 - `python -m pip check`: no broken requirements.
+- A real `start.py --local-ai` child starts on loopback and returns HTTP 200 `ok` from `/_stcore/health`; it is stopped after the check.
 - Numerical subnet test checks **250 generated scenarios** against independently reconstructed `ipaddress` networks.
 - Real Chroma is initialized, queried with a section filter, and reopened without re-embedding existing documents.
 - Streamlit AppTest submits a first chat prompt, restores saved messages in a fresh session, and verifies that both the composer and starter buttons remain blocked after choosing New chat.
-- A second UI workflow uses stubbed identity, billing, retrieval, and model boundaries to verify subscription unlock, follow-up context, and immediate denial after cancellation even while the sidebar display cache is stale.
+- Customer UI workflows exercise both Ollama and legacy Gemini provider selection with stubbed identity, billing, retrieval, and generation boundaries. They verify subscription unlock, follow-up context, and immediate denial after cancellation even while the sidebar display cache is stale.
+- Local AI AppTest uses the real Ollama adapter, HTTPX mock transport, and real Chroma to index references and stream a first answer without auth or billing keys. It then verifies the paywall, New chat, and isolated local-trial reset. A stopped Ollama server leaves the free response available.
+- Ollama contract checks cover Nomic task prefixes, batching, normalized 768-dimensional vectors, bounded history, verified subnet facts, thinking-output exclusion, immediate unloading, CPU options, missing/cloud models, invalid vectors, and incomplete streams.
+- Startup/configuration checks reject preview modes on Render, remote local-test URLs, conflicting modes, and cloud tags. The local launcher overrides an old demo flag and binds only to loopback; customer mode still requires Google auth and Stripe configuration.
+- Separate embedding profiles create distinct Chroma collections, preventing incompatible vector reuse.
 - Streaming lifecycle checks verify that failures before text release the trial; partial delivered responses are saved as interrupted and consume it.
 - Conversation ownership checks prevent reading or writing another account's chat. Trial completion and message persistence use one SQLite transaction.
 - A 16-attempt concurrent reservation test permits only one pending trial for the same account.
@@ -27,7 +32,7 @@ Python 3.12.14. Package versions are pinned in `requirements.txt`.
 
 ## Pending external checks
 
-Google OAuth callback configuration, real Gemini account/model access and output quality, the existing Stripe sandbox key, test checkout-to-unlock, the Stripe customer portal, Render persistence under restart, Render memory/concurrency, and backup/restore have not yet been verified on a deployed service.
+Actual Qwen/Nomic output, latency, and memory use on the Windows laptop are pending. This workspace has no running Ollama daemon: `python check_local_ai.py` correctly exits with an actionable server-not-ready message. Automated Ollama responses are mocked; the suite does not prove CCNA answer quality. Google OAuth, real Stripe checkout/portal, remote model hosting, Render persistence/concurrency, and backup/restore also remain pending.
 
 The visual refinement adds a navy sidebar, mint accents, topic cards, compact welcome layout, and a direct upgrade panel instead of disabled starter cards after the trial. Keyboard focus styles, mobile spacing rules, and reduced-motion rules are included.
 

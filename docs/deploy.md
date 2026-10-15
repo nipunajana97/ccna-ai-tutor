@@ -16,14 +16,17 @@ In Google Cloud Console, use or create the project for this app:
 
 `start.py` uses Google's OIDC metadata and Streamlit's native auth implementation. It does not implement password collection. A Google identity without verified email or with an expired token must sign in again.
 
-## 3. Gemini
+## 3. AI model server
 
-Create an API key in Google AI Studio and put it in `GEMINI_API_KEY`. The project's generation model must support `generateContent`, streaming, and JSON structured output. Defaults:
+The default backend is Ollama. Complete [local AI testing](local-ai.md) before deployment. Local defaults:
 
-- `GEMINI_MODEL=gemini-3.8-flash`
-- `GEMINI_EMBEDDING_MODEL=gemini-embedding-001`
+- `AI_PROVIDER=ollama`
+- `OLLAMA_MODEL=qwen3:1.7b`
+- `OLLAMA_EMBEDDING_MODEL=nomic-embed-text:v1.5`
 
-Free-tier access/rate limits are account/model dependent. The package does not assume unlimited free usage. Enable billing only when ready and configure provider-side budgets/alerts. The first AI request indexes the small reference; later requests reuse its stored embeddings. No embedding model weights are downloaded by the app.
+For customers, provision an always-on Ollama server separately and benchmark answer quality, memory, latency, and concurrent requests. The Render web service does not install or download models, and its localhost is not the Windows PC. Use an HTTPS proxy that validates `OLLAMA_AUTH_TOKEN`, and set `OLLAMA_BASE_URL` to its origin. No cloud fallback occurs. The first request indexes the starter reference; subsequent requests reuse its stored local embeddings.
+
+The legacy Gemini backend is optional: select `AI_PROVIDER=gemini`, provide `GEMINI_API_KEY`, and use `GEMINI_MODEL` / `GEMINI_EMBEDDING_MODEL`. It is not required for Ollama.
 
 ## 4. Stripe sandbox
 
@@ -56,9 +59,11 @@ Environment variables:
 
 | Variable | Value / source |
 | --- | --- |
-| `GEMINI_API_KEY` | Google AI Studio secret |
-| `GEMINI_MODEL` | `gemini-3.8-flash` |
-| `GEMINI_EMBEDDING_MODEL` | `gemini-embedding-001` |
+| `AI_PROVIDER` | `ollama` |
+| `OLLAMA_BASE_URL` | Origin of the separate authenticated HTTPS model proxy |
+| `OLLAMA_AUTH_TOKEN` | Secret verified by that proxy |
+| `OLLAMA_MODEL` | `qwen3:1.7b` for initial testing; benchmark before customer use |
+| `OLLAMA_EMBEDDING_MODEL` | `nomic-embed-text:v1.5` |
 | `STRIPE_SECRET_KEY` | Secret from this Stripe sandbox |
 | `STRIPE_PRICE_ID` | `price_1UQdZaCvG4xAhKW62tQteiuU` |
 | `STRIPE_PAYMENT_LINK` | `https://buy.stripe.com/test_aFa7sKfRceuj6BsfQk6wE00` |
@@ -68,6 +73,7 @@ Environment variables:
 | `AUTH_COOKIE_SECRET` | Random stable secret; Blueprint generates one |
 | `DATA_DIR` | `/var/data/ccna` |
 | `DEMO_MODE` | `false` |
+| `LOCAL_AI_TEST` | `false` |
 | `APP_URL` | Optional exact public URL; by default bootstrap uses `RENDER_EXTERNAL_URL` |
 | `DAILY_REQUEST_LIMIT` | `100` by default |
 | `GLOBAL_DAILY_REQUEST_LIMIT` | `500` by default |
@@ -93,7 +99,7 @@ Use Stripe sandbox only:
 11. Restart/redeploy the Render service. Verify saved trials/chats survive, then verify backup and recovery of the data disk.
 12. Compare local funnel counts with Stripe test subscription reports. Outgoing button clicks and completed paid conversions are different metrics.
 
-These live checks are still pending. Local automated tests do not establish that external credentials, OAuth callbacks, model entitlement, or customer portal settings are configured correctly.
+These live checks are still pending. Local automated tests do not establish that the real model server, external credentials, OAuth callbacks, or customer portal settings are configured correctly. Both preview modes are forbidden on Render; customer authentication and subscription checks remain required.
 
 ## 7. Before real payments and Reddit
 

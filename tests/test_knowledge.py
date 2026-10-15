@@ -46,3 +46,13 @@ def test_real_chroma_storage_and_section_filter_without_remote_model(tmp_path):
     assert sum(n for n, doc in calls if doc) == first_document_calls
     chunks = second.retrieve("OSPF hello timers MTU", section="3")
     assert chunks and all(c.section == "3" for c in chunks)
+
+
+def test_embedding_profiles_cannot_reuse_incompatible_vectors(tmp_path):
+    def embed(texts, document):
+        return [[1.0] * 768 for _ in texts]
+    args = (tmp_path / "index", ROOT / "ccna_knowledge.txt", ROOT / "docs/sources.json", "shared-tag", embed)
+    first = KnowledgeIndex(*args)
+    local = KnowledgeIndex(*args, embedding_profile="ollama|768|nomic-prefix-v1", top_k=2)
+    assert first.collection.name != local.collection.name
+    assert len(local.retrieve("Subnetting")) == 2

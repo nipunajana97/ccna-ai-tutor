@@ -238,9 +238,14 @@ def stripe_service(price_id, mode, _secret):
 
 
 @st.cache_resource
-def model_services(path, model, embedding_model, _key):
-    tutor = GeminiTutor(_key, model, embedding_model)
-    index = KnowledgeIndex(path, ROOT / "ccna_knowledge.txt", ROOT / "docs/sources.json", embedding_model, tutor.embed)
+def model_services(path, provider, model, embedding_model, ollama_url, embedding_profile, _key, _token):
+    if provider == "ollama":
+        from tutor.ollama_backend import OllamaTutor
+        tutor = OllamaTutor(ollama_url, model, embedding_model, _token)
+    else:
+        tutor = GeminiTutor(_key, model, embedding_model)
+    index = KnowledgeIndex(path, ROOT / "ccna_knowledge.txt", ROOT / "docs/sources.json", embedding_model, tutor.embed,
+                           embedding_profile=embedding_profile, top_k=2 if provider == "ollama" else 4)
     return tutor, index
 
 
@@ -266,14 +271,16 @@ def hero(locked=False):
     <div class="topic-strip"><span>Subnetting</span><span>Routing</span><span>OSPF</span><span>VLANs & STP</span><span>Security</span><span>Automation</span></div></div>''', unsafe_allow_html=True)
 
 
-store_dir = settings.data_dir / "demo" if settings.demo else settings.data_dir
+store_dir = settings.data_dir / ("local-ai" if settings.local_test else "demo") if settings.preview else settings.data_dir
 store = usage_store(str(store_dir / "usage.sqlite3"), settings.daily_limit, settings.global_daily_limit, settings.cooldown_seconds)
 if "visit_logged" not in st.session_state:
     store.event("visit")
     st.session_state.visit_logged = True
 
-if settings.demo:
-    identity = Identity(st.session_state.get("demo_viewer", "local-demo"), "demo@example.invalid")
+preview_key = "local_ai_viewer" if settings.local_test else "demo_viewer"
+if settings.preview:
+    default_viewer = "local-ai-test" if settings.local_test else "local-demo"
+    identity = Identity(st.session_state.get(preview_key, default_viewer), "preview@example.invalid")
 else:
     if "auth" not in st.secrets:
         st.info("Sign-in is being configured. Please return shortly.")
@@ -309,7 +316,7 @@ if st.session_state.get("viewer") != identity.user_id:
     st.session_state.pop("paywall_seen", None)
     store.event("login", identity.user_id)
 
-billing = None if settings.demo else stripe_service(settings.stripe_price_id, settings.billing_mode, settings.stripe_key)
+billing = None if settings.preview else stripe_service(settings.stripe_price_id, settings.billing_mode, settings.stripe_key)
 entitlement = Entitlement()
 billing_error = None
 if billing:
@@ -323,9 +330,9 @@ disabled = locked or bool(billing_error)
 
 
 def checkout_button(key, width="stretch"):
-    if settings.demo:
+    if settings.preview:
         st.button("Subscribe · $9/month", key=key, type="primary", disabled=True, width=width,
-                  help="Subscriptions are disabled in this offline local preview.")
+                  help="Subscriptions are disabled in local testing.")
     else:
         st.link_button("Subscribe · $9/month", settings.payment_link, key=key, type="primary", width=width,
                        on_click=store.event, args=("checkout_click", identity.user_id))
@@ -348,12 +355,12 @@ with st.sidebar:
         if st.button("New chat", icon=":material/add:", width="stretch"):
             st.session_state.conversation_id = None
             st.rerun()
-    if settings.demo:
+    if settings.preview:
         with st.container(key="restart-preview"):
             # A local preview reset cannot alter a real account's trial or history.
-            if st.button("Restart local preview", type="tertiary", icon=":material/restart_alt:", width="stretch",
-                         help="Start another offline preview. Real account trials cannot be reset here."):
-                st.session_state.demo_viewer = "local-preview-" + uuid.uuid4().hex
+            if st.button("Restart local AI trial" if settings.local_test else "Restart local preview", type="tertiary", icon=":material/restart_alt:", width="stretch",
+                         help="Start another local test trial. Real account trials cannot be reset here."):
+                st.session_state[preview_key] = "local-preview-" + uuid.uuid4().hex
                 st.rerun()
     st.markdown('<div class="sidebar-label">RECENT CONVERSATIONS</div>', unsafe_allow_html=True)
     with st.container(key="history"):
@@ -385,15 +392,23 @@ with st.sidebar:
     if billing_error:
         st.warning(billing_error)
     st.divider()
-    account_name = "Demo account" if settings.demo else html.escape(identity.email)
-    account_status = "Local preview" if settings.demo else ("Tutor Pass member" if entitlement.active else "Free account")
-    initial = "D" if settings.demo else html.escape(identity.email[0].upper())
+    account_name = ("Local AI account" if settings.local_test else "Demo account") if settings.preview else html.escape(identity.email)
+    account_status = ("Local AI test" if settings.local_test else "Local preview") if settings.preview else ("Tutor Pass member" if entitlement.active else "Free account")
+    initial = "L" if settings.preview else html.escape(identity.email[0].upper())
     st.markdown(f'<div class="account"><div class="account-avatar">{initial}</div><div><strong>{account_name}</strong><small>{account_status}</small></div></div>', unsafe_allow_html=True)
-    if not settings.demo and st.button("Sign out", type="tertiary"):
+    if not settings.preview and st.button("Sign out", type="tertiary"):
         st.logout()
     with st.expander("About & privacy"):
         st.caption("Independent CCNA study tool. The six-topic reference does not cover the entire exam.")
-        st.caption("Google verifies sign-in. We store a hashed account ID, usage, and chat messages with their references. Questions, recent conversation, and excerpts are sent to Gemini for AI replies. Avoid secrets in prompts.")
+        st.caption("We store chat messages, source excerpts, and usage with your account ID.")
+        if settings.preview:
+            st.caption("Local tests use a separate test identity and database. Login and payment calls are disabled.")
+        else:
+            st.caption("Google verifies sign-in. Stripe processes subscription payments.")
+        if settings.ai_provider == "ollama":
+            st.caption("Questions, recent conversation, and excerpts are processed by the configured Ollama server. Avoid secrets in prompts.")
+        else:
+            st.caption("Questions, recent conversation, and excerpts are sent to Google Gemini. Avoid secrets in prompts.")
         st.caption("Stripe processes payments. Use the same Google email at checkout. Manage or cancel from the subscription panel. Request allowances reset at 00:00 UTC.")
         st.caption("AI answers may be incorrect. Check the linked references.")
 
@@ -403,8 +418,10 @@ current_title = next((c["title"] for c in conversations if c["id"] == conversati
 status = "Tutor Pass" if entitlement.active else ("Free prompt used" if used else "1 free prompt")
 status_class = "status-pill used" if locked else "status-pill"
 st.markdown(f'<div class="chat-heading"><div><div class="heading-kicker">YOUR STUDY WORKSPACE</div><strong>{html.escape(current_title)}</strong></div><span class="{status_class}">{status}</span></div>', unsafe_allow_html=True)
-if settings.demo:
-    st.markdown('<div class="mode-banner"><strong>Local preview</strong><span>Curated offline examples · Gemini and payments are disabled</span></div>', unsafe_allow_html=True)
+if settings.local_test:
+    st.markdown(f'<div class="mode-banner"><strong>Local AI test</strong><span>Real Ollama answers · {html.escape(settings.model)} · Login and payments disabled</span></div>', unsafe_allow_html=True)
+elif settings.demo:
+    st.markdown('<div class="mode-banner"><strong>Local preview</strong><span>Curated offline examples · AI and payments are disabled</span></div>', unsafe_allow_html=True)
 elif settings.billing_mode == "test":
     st.markdown('<div class="mode-banner"><strong>Stripe sandbox</strong><span>Test subscriptions only · No real payments</span></div>', unsafe_allow_html=True)
 
@@ -456,8 +473,9 @@ if locked:
             st.markdown('<div class="gate-price">$9<span> / month</span></div>', unsafe_allow_html=True)
             checkout_button("main-checkout")
             st.caption(f"Up to {settings.daily_limit} prompts per day · Cancel anytime")
-        if settings.demo:
-            st.caption("The subscription gate is shown for testing. To try the interface again, use “Restart local preview” in the sidebar.")
+        if settings.preview:
+            reset_name = "Restart local AI trial" if settings.local_test else "Restart local preview"
+            st.caption(f"The subscription gate is shown for testing. To try another local prompt, use “{reset_name}” in the sidebar.")
         else:
             st.caption(f"Use {identity.email} at checkout, then return to this conversation.")
             refresh_payment("main-refresh")
@@ -484,7 +502,9 @@ if question:
             chunks = [chunk for chunk in all_chunks if chunk.section == section]
             tokens = iter(answer.splitlines(keepends=True))
         else:
-            tutor, index = model_services(str(settings.data_dir / "chroma"), settings.gemini_model, settings.embedding_model, settings.gemini_key)
+            tutor, index = model_services(str(store_dir / "chroma"), settings.ai_provider, settings.model,
+                                          settings.embedding_model, settings.ollama_url, settings.embedding_profile,
+                                          settings.gemini_key, settings.ollama_token)
             # Include the previous question so short follow-ups retrieve the relevant topic.
             prior_questions = [m["content"] for m in messages[-4:] if m["role"] == "user"]
             chunks = index.retrieve("\n".join(prior_questions + [question])[-3600:])
@@ -501,8 +521,11 @@ if question:
     except AccessDenied as exc:
         display_entitlement.clear()
         st.session_state.chat_notice = str(exc)
-    except (BillingUnavailable, GenerationError) as exc:
+    except BillingUnavailable as exc:
         st.session_state.chat_notice = str(exc)
+    except GenerationError as exc:
+        st.session_state.chat_notice = (str(exc) if settings.preview or settings.ai_provider == "gemini" else
+                                       "The tutor could not finish this response. Please retry. Any partial response is saved.")
     except Exception:
         st.session_state.chat_notice = "The tutor is temporarily unavailable. Please try again."
     # Re-render from the ledger: saved history and paywall update together.

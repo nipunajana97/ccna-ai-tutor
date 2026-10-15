@@ -1,16 +1,22 @@
 """Render entry point: construct Streamlit OIDC secrets from server env, then exec."""
 import os
+import argparse
 from pathlib import Path
 import sys
 from dotenv import load_dotenv
 import tomli_w
+from tutor.config import Settings
 
 ROOT = Path(__file__).resolve().parent
 load_dotenv(ROOT / ".env")
 
 
-def configure_auth():
-    if os.getenv("DEMO_MODE", "false").lower() == "true":
+def configure_auth(settings=None):
+    settings = settings or Settings.from_env()
+    if settings.preview:
+        errors = settings.errors()
+        if errors:
+            raise ValueError("\n".join(errors))
         return
     required = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "AUTH_COOKIE_SECRET"]
     missing = [name for name in required if not os.getenv(name)]
@@ -34,9 +40,19 @@ def configure_auth():
         handle.write(tomli_w.dumps(auth))
 
 
-if __name__ == "__main__":
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Start the CCNA tutor")
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--local-ai", action="store_true", help="Real Ollama answers on localhost; no login or payment calls")
+    modes.add_argument("--demo", action="store_true", help="Offline interface preview")
+    args = parser.parse_args(argv)
+    if args.local_ai:
+        os.environ.update(LOCAL_AI_TEST="true", DEMO_MODE="false", AI_PROVIDER="ollama")
+    elif args.demo:
+        os.environ.update(DEMO_MODE="true", LOCAL_AI_TEST="false")
     try:
-        configure_auth()
+        settings = Settings.from_env()
+        configure_auth(settings)
         port = int(os.getenv("PORT", "8501"))
         if not 1 <= port <= 65535:
             raise ValueError("Invalid PORT")
@@ -44,4 +60,9 @@ if __name__ == "__main__":
         print(str(exc), file=sys.stderr)
         sys.exit(1)
     os.chdir(ROOT)
-    os.execv(sys.executable, [sys.executable, "-m", "streamlit", "run", "app.py", "--server.address=0.0.0.0", f"--server.port={port}", "--server.headless=true"])
+    address = "127.0.0.1" if settings.preview else "0.0.0.0"
+    os.execv(sys.executable, [sys.executable, "-m", "streamlit", "run", "app.py", f"--server.address={address}", f"--server.port={port}", "--server.headless=true"])
+
+
+if __name__ == "__main__":
+    main()

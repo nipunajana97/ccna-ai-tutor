@@ -41,12 +41,13 @@ def read_chunks(path, sources_path, max_chars=2400):
 
 
 class KnowledgeIndex:
-    def __init__(self, directory, knowledge_path, sources_path, embedding_model, embedder):
+    def __init__(self, directory, knowledge_path, sources_path, embedding_model, embedder, *, embedding_profile="768|v1", top_k=4):
         import chromadb
         from chromadb.config import Settings
         text, self.chunks = read_chunks(knowledge_path, sources_path)
-        digest = hashlib.sha256((text + embedding_model + "|768|v1").encode()).hexdigest()[:24]
+        digest = hashlib.sha256((text + embedding_model + "|" + embedding_profile).encode()).hexdigest()[:24]
         self.embedder = embedder
+        self.top_k = top_k
         self.client = chromadb.PersistentClient(path=str(directory), settings=Settings(anonymized_telemetry=False))
         self.collection = self.client.get_or_create_collection(
             name=f"ccna-{digest}", embedding_function=None, metadata={"hnsw:space": "cosine"})
@@ -59,7 +60,7 @@ class KnowledgeIndex:
 
     def retrieve(self, query, section=None):
         params = {"query_embeddings": self.embedder([query], document=False),
-                  "n_results": min(4, self.collection.count()), "include": ["documents", "metadatas"]}
+                  "n_results": min(self.top_k, self.collection.count()), "include": ["documents", "metadatas"]}
         if section:
             params["where"] = {"section": str(section)}
         result = self.collection.query(**params)
