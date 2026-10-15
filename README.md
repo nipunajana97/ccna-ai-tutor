@@ -10,7 +10,8 @@ Repository: https://github.com/nipunajana97/ccna-ai-tutor
 - Gemini API document/query embeddings and current `google-genai` SDK.
 - Configurable generation model, default `gemini-3.8-flash` per Google's October 2026 documentation.
 - `gemini-embedding-001` with normalized 768-dimensional vectors and retrieval task types. Changing the embedding model rebuilds the index into a separate collection. The code currently expects this model's task-type semantics; do not switch to Embedding 2 without adapting them.
-- ChatGPT-style conversation layout: saved chats in the sidebar, starter prompts, streamed answers, and a bottom message composer.
+- ChatGPT-style conversation layout with a navy sidebar, colored topic cards, streamed answers, saved chats, and a bottom message composer.
+- Compact welcome screen and a direct upgrade panel when the trial is used; the local preview restart control sits below New chat.
 - First chat response free; the conversation remains readable when the subscription gate appears.
 - Follow-up answers use recent conversation context and retrieved references.
 - Persisted conversation history and source excerpts, isolated by authenticated account.

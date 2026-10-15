@@ -38,7 +38,7 @@ def test_chat_first_prompt_history_and_durable_paywall(tmp_path, monkeypatch):
     by_label(fresh.button, "New chat").click().run()
     assert not fresh.chat_message
     assert fresh.chat_input[0].disabled
-    assert by_label(fresh.button, "Work through a subnet").disabled
+    assert not any(button.key and button.key.startswith("starter-") and not button.disabled for button in fresh.button)
 
     # The saved conversation remains accessible from the sidebar.
     by_label(fresh.button, "Explain 192.168.10.77/26").click().run()

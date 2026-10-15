@@ -29,4 +29,6 @@ Python 3.12.14. Package versions are pinned in `requirements.txt`.
 
 Google OAuth callback configuration, real Gemini account/model access and output quality, the existing Stripe sandbox key, test checkout-to-unlock, the Stripe customer portal, Render persistence under restart, Render memory/concurrency, and backup/restore have not yet been verified on a deployed service.
 
-This report records local verification of the chat-interface update. The UI workflows use Streamlit's test runner, not a browser screenshot comparison. No live payments were collected, no Render service was provisioned, and no Reddit post was published.
+The visual refinement adds a navy sidebar, mint accents, topic cards, compact welcome layout, and a direct upgrade panel instead of disabled starter cards after the trial. Keyboard focus styles, mobile spacing rules, and reduced-motion rules are included.
+
+This report records local verification of the chat-interface update. The UI workflows use Streamlit's test runner. A browser screenshot check was attempted, but the cloud browser could not connect to the workspace's localhost server (`ERR_CONNECTION_REFUSED`); rendered desktop/mobile screenshots have not been verified. No live payments were collected, no Render service was provisioned, and no Reddit post was published.

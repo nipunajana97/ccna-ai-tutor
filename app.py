@@ -11,51 +11,183 @@ from tutor.engine import GenerationError, GeminiTutor
 from tutor.knowledge import KnowledgeIndex, read_chunks
 from tutor.chat import preview_response, stream_reply
 
-st.set_page_config(page_title="CCNA Tutor", page_icon="◈", layout="wide")
+st.set_page_config(page_title="CCNA Tutor", page_icon="🌐", layout="wide")
 settings = Settings.from_env()
 st.markdown("""
 <style>
-:root {--ink:#172b29;--muted:#6b7876;--accent:#16796a;--line:#e9eeec;}
-.stApp {background:#fff;color:var(--ink);}
-[data-testid="stMainBlockContainer"] {max-width:920px;padding:2.8rem 2.5rem 6rem;}
-[data-testid="stSidebar"] {background:#f7f9f8;border-right:1px solid var(--line);}
-[data-testid="stSidebar"] [data-testid="stSidebarContent"] {padding-top:1.2rem;}
-[data-testid="stHeader"] {background:rgba(255,255,255,.92);}
-h1,h2,h3 {letter-spacing:-.035em;}
-h1 {font-weight:650!important;}
-.brand {display:flex;align-items:center;gap:11px;margin:0 0 22px;font-size:1.18rem;font-weight:700;letter-spacing:-.03em;}
-.brand-mark {display:grid;place-items:center;width:35px;height:35px;border-radius:11px;background:#16796a;color:white;font-size:25px;}
-.brand small {display:block;color:#85918e;font-size:.65rem;letter-spacing:.14em;font-weight:600;}
-.chat-heading {display:flex;justify-content:space-between;align-items:center;gap:12px;padding:0 0 24px;border-bottom:1px solid var(--line);margin-bottom:26px;}
-.chat-heading strong {font-size:1rem;font-weight:600;}
-.status-pill {border:1px solid #dde9e4;background:#f5faf7;color:#3d6b5b;border-radius:20px;font-size:.73rem;padding:5px 11px;white-space:nowrap;}
-.hero {text-align:center;padding:55px 0 22px;}
-.hero-mark {display:grid;place-items:center;margin:0 auto 22px;width:59px;height:59px;border-radius:19px;background:#eaf5ef;color:#16796a;font-size:38px;}
-.hero .eyebrow {font-size:.72rem;letter-spacing:.17em;color:#76837d;font-weight:650;margin-bottom:12px;}
-.hero h1 {font-size:clamp(2rem,4vw,2.8rem);line-height:1.16;margin:0 auto 12px;max-width:640px;}
-.hero p {color:var(--muted);font-size:1.02rem;line-height:1.7;max-width:490px;margin:0 auto;}
-.st-key-starters {margin:10px 0 18px;}
-.st-key-starters [data-testid="stVerticalBlockBorderWrapper"] {border-radius:16px;}
-.st-key-starters button {justify-content:flex-start;text-align:left;font-weight:600;min-height:44px;}
-.st-key-starters [data-testid="stCaptionContainer"] {padding:0 9px 5px;line-height:1.6;}
-.st-key-history button {justify-content:flex-start;text-align:left;border-radius:9px;font-size:.88rem;overflow:hidden;}
-.st-key-history button p {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-[data-testid="stChatMessage"] {background:white;border-radius:18px;padding:1.2rem 1.1rem;margin-bottom:16px;}
-[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {background:#f3f6f5;}
-[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarAssistant"]) {background:white;}
-[data-testid="stChatMessage"] p {line-height:1.8;}
-[data-testid="stBottomBlockContainer"] {max-width:920px;padding:0 2.5rem 1.4rem;}
-[data-testid="stChatInput"] {border-radius:21px;border:1px solid #dce4e0;box-shadow:0 5px 24px #16362b08;background:#f9fbfa;}
-[data-testid="stChatInput"] textarea {font-size:.97rem;}
-.st-key-subscription_gate {background:#f2f8f4;border:1px solid #dcebe1;border-radius:18px;padding:22px!important;margin:14px 0 24px;}
-.st-key-subscription_gate h3 {font-size:1.25rem;}
-.st-key-plan {background:white;border-radius:13px;padding:15px!important;border:1px solid var(--line);}
-.small-note {color:#85918b;text-align:center;font-size:.76rem;margin-top:16px;}
+:root {
+ --ink:#142538;--muted:#687c90;--accent:#0b8b91;--line:#e2eaf1;
+ --canvas:#f7f9fc;--sidebar:#101f30;--mint:#bcf4da;
+}
+.stApp {
+ color:var(--ink);
+ background:radial-gradient(ellipse at 55% 0%,#e8f5f6 0,transparent 48%),var(--canvas);
+ font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+h1,h2,h3,h4,button,input,textarea,[data-testid="stMarkdownContainer"] {
+ font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+h1,h2,h3 {letter-spacing:-.045em;}
+[data-testid="stMainBlockContainer"] {max-width:1000px;padding:1.4rem 2.6rem 8rem;}
+[data-testid="stHeader"] {background:transparent;pointer-events:none;}
+[data-testid="stHeader"] button {pointer-events:auto;}
+.stAppDeployButton {display:none;}
+[data-testid="stToolbar"] {display:none;}
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] {gap:.8rem;}
+.brand {display:flex;align-items:center;gap:12px;margin:0 0 22px;color:#f3f8ff;}
+.brand-name {font-size:1.17rem;font-weight:720;letter-spacing:-.045em;line-height:1.2;}
+.brand small {display:block;color:#829ab2;font-size:.64rem;letter-spacing:.17em;font-weight:650;margin-top:5px;}
+.brand-mark {
+ display:grid;place-items:center;flex-shrink:0;width:39px;height:39px;border-radius:12px;
+ background:linear-gradient(140deg,#b9f5d9,#67cdd8);color:#103c48;box-shadow:0 5px 16px #0002;
+}
+.brand-mark svg {width:26px;height:26px;}
+[data-testid="stSidebar"] {background:var(--sidebar);border-right:1px solid #203246;}
+[data-testid="stSidebar"] [data-testid="stSidebarContent"] {padding-top:.4rem;}
+[data-testid="stSidebarUserContent"] {padding:1.15rem 1.05rem 1rem;}
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {color:#e3ecf6;}
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"] p {color:#8fa6bd;font-size:.74rem;line-height:1.55;}
+[data-testid="stSidebar"] h3 {color:#f1f7fd;}
+[data-testid="stSidebar"] hr {border-color:#293b4e;margin:.85rem 0;}
+[data-testid="stSidebar"] button {
+ border-color:#314357;background:#182d42;color:#e5eef9;border-radius:10px;min-height:39px;
+ transition:background .18s,border-color .18s,transform .18s;
+}
+[data-testid="stSidebar"] button p {color:inherit;font-size:.8rem;}
+[data-testid="stSidebar"] button:hover {background:#233d55;border-color:#5d8398;}
+[data-testid="stSidebar"] button:focus-visible {outline:3px solid #89dccb;outline-offset:2px;}
+[data-testid="stSidebar"] button[kind="tertiary"] {background:transparent;border-color:transparent;color:#a4bbce;}
+[data-testid="stSidebar"] button[kind="tertiary"]:hover {background:#1c3248;color:white;}
+.st-key-new-chat button {background:#bcf4da!important;border:0!important;color:#123b3a!important;font-weight:700;min-height:42px;}
+.st-key-new-chat button:hover {background:#d1ffe9!important;transform:translateY(-1px);}
+.st-key-restart-preview button {min-height:30px!important;font-size:.73rem;}
+.st-key-history {min-height:60px;margin:0 0 8px;}
+.st-key-history button {justify-content:flex-start;text-align:left;border-radius:9px;overflow:hidden;margin:1px 0;}
+.st-key-history button p {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.77rem;}
+.st-key-history button[kind="secondary"] {background:#203c51;border-color:#34596a;color:#d5f5e9;}
+.history-empty {border:1px dashed #31465a;border-radius:12px;padding:15px 12px;margin:0 0 12px;}
+.history-empty strong {display:block;color:#b7c9d8;font-size:.75rem;font-weight:550;margin-bottom:4px;}
+.history-empty span {display:block;color:#778fa6;font-size:.69rem;line-height:1.5;}
+.sidebar-label {font-size:.62rem;font-weight:700;letter-spacing:.15em;color:#7791a9;margin:18px 0 10px;}
+.st-key-plan {
+ border:1px solid #325267;border-radius:15px;padding:16px!important;
+ background:radial-gradient(ellipse at 100% 0%,#21485b 0,transparent 65%),#192e42;
+}
+.plan-kicker {color:#a8edcf;font-weight:700;font-size:.61rem;letter-spacing:.14em;}
+.plan-title {font-size:.95rem;font-weight:650;color:#f0f7fd;margin:6px 0 8px;letter-spacing:-.02em;}
+.plan-price {color:white;font-size:1.7rem;letter-spacing:-.06em;font-weight:650;margin:6px 0;}
+.plan-price span {font-size:.72rem;font-weight:400;letter-spacing:0;color:#a5b8c9;}
+.plan-trial {font-size:.7rem;color:#9fd8c7;margin:0 0 8px;}
+.st-key-plan button[kind="primary"],.st-key-plan a[kind="primary"] {
+ background:#bcf4da!important;border-color:#bcf4da!important;color:#103f38!important;border-radius:9px;
+}
+.st-key-plan button[kind="primary"]:disabled {opacity:.65;}
+.st-key-plan a p {color:inherit!important;font-size:.78rem;}
+.st-key-plan button[kind="secondary"] {background:transparent;font-size:.72rem;min-height:32px;}
+.account {display:flex;align-items:center;gap:10px;margin:4px 0 9px;}
+.account-avatar {display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:#2c4357;color:#d9e8f4;font-size:.78rem;font-weight:650;}
+.account strong {font-size:.75rem;color:#e2ebf4;font-weight:550;display:block;overflow-wrap:anywhere;}
+.account small {font-size:.65rem;color:#7f98ad;display:block;margin-top:3px;}
+[data-testid="stSidebar"] [data-testid="stExpander"] {background:transparent;border-color:#2b4055;color:#9bb0c4;border-radius:10px;}
+[data-testid="stSidebar"] [data-testid="stExpander"] details summary p {color:#9bb0c4;font-size:.73rem;}
+.chat-heading {display:flex;justify-content:space-between;align-items:center;gap:16px;margin:12px 0 5px;}
+.heading-kicker {font-size:.62rem;letter-spacing:.16em;color:#8394a5;font-weight:700;margin-bottom:6px;}
+.chat-heading strong {font-size:.91rem;font-weight:650;letter-spacing:-.02em;display:block;}
+.status-pill {display:flex;align-items:center;gap:7px;flex-shrink:0;border:1px solid #d0e8dd;background:#eef8f3;color:#32705c;border-radius:20px;font-size:.68rem;padding:7px 12px;font-weight:550;}
+.status-pill::before {content:"";height:5px;width:5px;border-radius:50%;background:#28a77b;}
+.status-pill.used {border-color:#eadfce;background:#fcf8ef;color:#8d6a2d;}
+.status-pill.used::before {background:#ca9a49;}
+.mode-banner {display:flex;align-items:center;flex-wrap:wrap;gap:7px 10px;padding:8px 12px;border-radius:9px;background:#edf2f7;border:1px solid #e0e8ef;color:#7b8c9d;font-size:.67rem;margin:0;}
+.mode-banner strong {font-weight:650;color:#50677e;}
+.hero {text-align:center;padding:20px 0 12px;}
+.hero-network {display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px;}
+.network-node {width:10px;height:10px;border-radius:3px;background:#c4dbe2;box-shadow:0 0 0 4px #edf5f7;transform:rotate(45deg);}
+.network-node.main {height:36px;width:36px;border-radius:12px;background:linear-gradient(135deg,#139c9c,#1b697f);transform:rotate(0);box-shadow:0 7px 20px #0b848023;display:grid;place-items:center;color:#d8fff0;}
+.network-node.main svg {width:25px;height:25px;}
+.network-link {height:1px;width:25px;background:linear-gradient(90deg,#d6e4ea,#8dbcc6);}
+.hero .eyebrow {font-size:.62rem;letter-spacing:.15em;color:#637c8e;font-weight:700;margin-bottom:10px;}
+.hero h1 {font-size:clamp(1.95rem,3.3vw,2.55rem);font-weight:720;line-height:1.1;padding:0!important;margin:0 auto 12px!important;max-width:760px;}
+.hero h1 span {background:linear-gradient(105deg,#0f887d,#3486ad);background-clip:text;-webkit-background-clip:text;color:transparent;}
+.hero p {color:#657b8e;font-size:.82rem;line-height:1.65;max-width:470px;margin:0 auto!important;}
+.hero.locked {padding:24px 0 8px;}
+.hero.locked h1 {font-size:2.15rem;}
+.topic-strip {display:flex;justify-content:center;flex-wrap:wrap;gap:7px;margin:12px 0 2px;}
+.topic-strip span {font-size:.61rem;color:#6d8394;border:1px solid #dee8ee;background:#ffffffa8;border-radius:6px;padding:4px 8px;}
+.st-key-starters {margin:0 0 5px;}
+.st-key-starters [data-testid="stHorizontalBlock"] {gap:14px;}
+.st-key-starters [data-testid="stVerticalBlock"] {gap:5px;}
+[class*="st-key-prompt-"] {
+ background:#ffffffd9;border:1px solid #e0e8f0;border-radius:16px;padding:15px!important;
+ box-shadow:0 3px 10px #172c4203;transition:border-color .2s,box-shadow .2s,transform .2s;
+}
+[class*="st-key-prompt-"]:hover {border-color:#a5c9cd;box-shadow:0 8px 22px #173b5510;transform:translateY(-2px);}
+.card-top {display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
+.card-icon {display:grid;place-items:center;width:31px;height:31px;border-radius:10px;background:#e5f4f1;color:#248974;font-size:.78rem;font-weight:700;letter-spacing:-.05em;}
+.card-topic {font-size:.57rem;text-transform:uppercase;letter-spacing:.12em;color:#637b8f;font-weight:650;}
+.st-key-prompt-ospf .card-icon {background:#e9effd;color:#5e76b8;}
+.st-key-prompt-routing .card-icon {background:#f0ebfa;color:#8b6abd;}
+.st-key-prompt-switching .card-icon {background:#fcf0e4;color:#bb8a46;}
+.st-key-starters button {background:transparent;border:0;padding:0!important;justify-content:flex-start;text-align:left;min-height:29px;color:#1d344a;}
+.st-key-starters button p {font-size:.84rem;font-weight:650;letter-spacing:-.02em;color:inherit;}
+.st-key-starters button:hover {color:#0b8b91;background:transparent;}
+.st-key-starters button:focus-visible {outline:3px solid #8bc9c6;outline-offset:5px;}
+.st-key-starters [data-testid="stCaptionContainer"] p {font-size:.71rem;line-height:1.5;color:#667b8f;margin:0;}
+.small-note {color:#6f8395;text-align:center;font-size:.66rem;margin:10px 0 0;}
+[data-testid="stChatMessage"] {background:transparent;border-radius:16px;padding:1.2rem .8rem;margin:4px 0 12px;}
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {background:#eaf0f6;border:1px solid #e2e9f0;margin-left:9%;}
+[data-testid="stChatMessage"] p {line-height:1.75;font-size:.9rem;}
+[data-testid="stChatMessage"] [data-testid="stChatMessageAvatarCustom"] {background:#dff2ed;color:#107f76;}
+[data-testid="stChatMessage"] [data-testid="stExpander"] {border:1px solid #e1e9ef;border-radius:10px;background:#ffffffb5;}
+[data-testid="stChatMessage"] table {font-size:.8rem;}
+[data-testid="stBottom"] {background:linear-gradient(0deg,#f7f9fc 75%,#f7f9fc00);}
+[data-testid="stBottomBlockContainer"] {max-width:1000px;padding:.4rem 2.6rem 1rem;}
+[data-testid="stBottomBlockContainer"]::after {content:"Independent CCNA study tool · Check AI answers against the references";display:block;text-align:center;font-size:10px;color:#97a6b4;margin-top:9px;}
+[data-testid="stChatInput"] {border-radius:18px;border:1px solid #ccdce4;box-shadow:0 7px 30px #1a405a0c;background:#fff;min-height:58px;}
+[data-testid="stChatInput"]:focus-within {border-color:#66b8b0;box-shadow:0 0 0 3px #a6dcd72b,0 7px 30px #1a405a0c;}
+[data-testid="stChatInput"] textarea {font-size:.86rem;line-height:1.55;}
+.st-key-subscription_gate {
+ background:radial-gradient(ellipse at 100% 0%,#e2f4ed,transparent 65%),#fff;
+ border:1px solid #d6e6e2;border-radius:20px;padding:25px!important;margin:7px 0 12px;
+ box-shadow:0 7px 30px #24473d07;
+}
+.st-key-subscription_gate h3 {font-size:1.35rem;font-weight:670;letter-spacing:-.04em;padding-top:0;}
+.st-key-subscription_gate [data-testid="stMarkdownContainer"] p {font-size:.82rem;color:#768b94;line-height:1.7;}
+.gate-kicker {font-size:.61rem;color:#249579;letter-spacing:.14em;font-weight:750;margin-bottom:9px;}
+.gate-features {display:flex;flex-wrap:wrap;gap:8px 15px;margin:14px 0 12px;}
+.gate-features span {font-size:.68rem;color:#4f796a;}
+.gate-features span::before {content:"✓";margin-right:5px;font-weight:700;color:#279779;}
+.gate-price {font-size:2.7rem;line-height:1.1;letter-spacing:-.07em;font-weight:700;color:#193e3d;margin:5px 0 8px;}
+.gate-price span {font-size:.75rem;letter-spacing:0;font-weight:400;color:#7c9890;}
+.st-key-subscription_gate button[kind="primary"],.st-key-subscription_gate a[kind="primary"] {background:#0c8b80;border-color:#0c8b80;border-radius:10px;min-height:42px;}
+.st-key-subscription_gate button[kind="primary"]:disabled {opacity:.58;color:white;}
+.st-key-subscription_gate [data-testid="stCaptionContainer"] p {font-size:.65rem;color:#8a9a9d;line-height:1.6;}
+@media(min-width:1024px) {
+ [data-testid="stSidebar"][aria-expanded="true"] {width:280px!important;min-width:280px!important;max-width:280px!important;}
+}
+@media(max-height:800px) and (min-width:768px) {
+ .hero {padding-top:16px;padding-bottom:10px;}
+ .hero-network {margin-bottom:12px;}
+ .topic-strip {margin-top:12px;}
+ .brand {margin-bottom:15px;}
+ .sidebar-label {margin-top:14px;}
+}
 @media(max-width:640px) {
- [data-testid="stMainBlockContainer"] {padding:2.2rem 1rem 4rem;}
- [data-testid="stBottomBlockContainer"] {padding:0 1rem .8rem;}
- .hero {padding-top:26px;}
+ [data-testid="stMainBlockContainer"] {padding:1.2rem 1rem 7rem;}
+ [data-testid="stBottomBlockContainer"] {padding:.4rem 1rem .8rem;}
+ .hero {padding-top:20px;}
+ .hero h1 {font-size:1.95rem;}
+ .hero.locked h1 {font-size:1.8rem;}
+ .hero p {font-size:.8rem;}
+ .topic-strip {gap:5px;}
  .chat-heading {align-items:flex-start;}
+ .status-pill {font-size:.6rem;padding:6px 8px;}
+ [class*="st-key-prompt-"] {padding:12px!important;}
+ .st-key-starters [data-testid="stHorizontalBlock"] {gap:10px;}
+ .st-key-starters button p {font-size:.79rem;}
+ .st-key-subscription_gate {padding:19px!important;}
+}
+@media(prefers-reduced-motion:reduce) {
+ [class*="st-key-prompt-"],[data-testid="stSidebar"] button {transition:none!important;transform:none!important;}
 }
 </style>
 """, unsafe_allow_html=True)
@@ -91,15 +223,21 @@ def display_entitlement(email, price_id, mode, _billing):
     return _billing.entitlement(email)
 
 
+NETWORK_ICON = '<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M10 10L22 10M10 10L16 23M22 10L16 23" stroke="currentColor" stroke-width="1.5"/><rect x="5" y="5" width="9" height="9" rx="2.5" fill="currentColor"/><rect x="18" y="5" width="9" height="9" rx="2.5" fill="currentColor"/><rect x="11.5" y="19" width="9" height="9" rx="2.5" fill="currentColor"/></svg>'
+
+
 def brand():
-    st.markdown('<div class="brand"><span class="brand-mark">◈</span><div>CCNA Tutor<small>YOUR NETWORKING STUDY SPACE</small></div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="brand"><span class="brand-mark">{NETWORK_ICON}</span><div class="brand-name">CCNA Tutor<small>YOUR NETWORKING STUDY SPACE</small></div></div>', unsafe_allow_html=True)
 
 
-def hero():
-    st.markdown("""<div class="hero"><div class="hero-mark">◈</div>
-    <div class="eyebrow">CCNA 200-301 · SCENARIOS & EXPLANATIONS</div>
-    <h1>What are we learning today?</h1>
-    <p>Untangle a tricky concept, work through a network problem, or practice your next exam scenario.</p></div>""", unsafe_allow_html=True)
+def hero(locked=False):
+    title = 'Keep your curiosity.<br><span>Continue the conversation.</span>' if locked else 'Build confidence.<br><span>One network at a time.</span>'
+    description = 'Your next question, clearer explanations, and more practice — all in one study space.' if locked else 'Make sense of tricky concepts. Work through real-world scenarios. Find the reasoning behind every answer.'
+    st.markdown(f'''<div class="hero{' locked' if locked else ''}">
+    <div class="hero-network"><span class="network-node"></span><span class="network-link"></span><span class="network-node main">{NETWORK_ICON}</span><span class="network-link"></span><span class="network-node"></span></div>
+    <div class="eyebrow">YOUR CCNA 200-301 STUDY PARTNER</div>
+    <h1>{title}</h1><p>{description}</p>
+    <div class="topic-strip"><span>Subnetting</span><span>Routing</span><span>OSPF</span><span>VLANs & STP</span><span>Security</span><span>Automation</span></div></div>''', unsafe_allow_html=True)
 
 
 store_dir = settings.data_dir / "demo" if settings.demo else settings.data_dir
@@ -180,24 +318,30 @@ def refresh_payment(key):
 
 with st.sidebar:
     brand()
-    if st.button("New chat", icon=":material/edit_square:", width="stretch"):
-        st.session_state.conversation_id = None
-        st.rerun()
-    st.space("small")
-    st.caption("RECENT CHATS")
+    with st.container(key="new-chat"):
+        if st.button("New chat", icon=":material/add:", width="stretch"):
+            st.session_state.conversation_id = None
+            st.rerun()
+    if settings.demo:
+        with st.container(key="restart-preview"):
+            # A local preview reset cannot alter a real account's trial or history.
+            if st.button("Restart local preview", type="tertiary", icon=":material/restart_alt:", width="stretch",
+                         help="Start another offline preview. Real account trials cannot be reset here."):
+                st.session_state.demo_viewer = "local-preview-" + uuid.uuid4().hex
+                st.rerun()
+    st.markdown('<div class="sidebar-label">RECENT CONVERSATIONS</div>', unsafe_allow_html=True)
     with st.container(key="history"):
         if not conversations:
-            st.caption("Your conversations will appear here.")
+            st.markdown('<div class="history-empty"><strong>A fresh space for your questions</strong><span>Your saved conversations will appear here.</span></div>', unsafe_allow_html=True)
         for conversation in conversations:
             selected = conversation["id"] == st.session_state.conversation_id
             if st.button(conversation["title"], key="chat-" + conversation["id"],
                          type="secondary" if selected else "tertiary", width="stretch", icon=":material/chat_bubble_outline:"):
                 st.session_state.conversation_id = conversation["id"]
                 st.rerun()
-    st.space("medium")
     with st.container(key="plan"):
         if entitlement.active:
-            st.markdown("**CCNA Tutor Pass**")
+            st.markdown('<div class="plan-kicker">YOUR MEMBERSHIP</div><div class="plan-title">CCNA Tutor Pass</div>', unsafe_allow_html=True)
             st.caption(f"Subscriber access · Up to {settings.daily_limit} prompts/day")
             if st.button("Manage subscription", width="stretch"):
                 try:
@@ -206,24 +350,20 @@ with st.sidebar:
                 except BillingUnavailable as exc:
                     st.warning(str(exc))
         else:
-            st.markdown("**Keep the conversation going**")
-            st.caption("1 free response used" if used else "1 free response available")
-            st.caption(f"$9/month · Up to {settings.daily_limit} prompts/day")
+            trial_label = "Your free response has been used" if used else "Your first response is on us"
+            st.markdown(f'<div class="plan-kicker">A LITTLE PRACTICE, EVERY DAY</div><div class="plan-title">Go further with Tutor Pass</div><div class="plan-price">$9<span> / month</span></div><div class="plan-trial">{trial_label}</div>', unsafe_allow_html=True)
             checkout_button("sidebar-checkout")
+            st.caption(f"Up to {settings.daily_limit} prompts daily · Cancel anytime")
         if billing:
             refresh_payment("sidebar-refresh")
     if billing_error:
         st.warning(billing_error)
     st.divider()
-    st.caption("LOCAL PREVIEW" if settings.demo else "SIGNED IN")
-    st.write("Demo account" if settings.demo else identity.email)
-    if settings.demo:
-        # A deliberate preview reset uses a separate local identity, never a real account.
-        if st.button("Restart local preview", type="tertiary", icon=":material/restart_alt:",
-                     help="Start a new offline preview trial. Real account trials cannot be reset here."):
-            st.session_state.demo_viewer = "local-preview-" + uuid.uuid4().hex
-            st.rerun()
-    elif st.button("Sign out", type="tertiary"):
+    account_name = "Demo account" if settings.demo else html.escape(identity.email)
+    account_status = "Local preview" if settings.demo else ("Tutor Pass member" if entitlement.active else "Free account")
+    initial = "D" if settings.demo else html.escape(identity.email[0].upper())
+    st.markdown(f'<div class="account"><div class="account-avatar">{initial}</div><div><strong>{account_name}</strong><small>{account_status}</small></div></div>', unsafe_allow_html=True)
+    if not settings.demo and st.button("Sign out", type="tertiary"):
         st.logout()
     with st.expander("About & privacy"):
         st.caption("Independent CCNA study tool. The six-topic reference does not cover the entire exam.")
@@ -235,31 +375,34 @@ conversation_id = st.session_state.conversation_id
 messages = store.messages(conversation_id, identity.user_id) if conversation_id else []
 current_title = next((c["title"] for c in conversations if c["id"] == conversation_id), "New conversation")
 status = "Tutor Pass" if entitlement.active else ("Free prompt used" if used else "1 free prompt")
-st.markdown(f'<div class="chat-heading"><strong>{html.escape(current_title)}</strong><span class="status-pill">{status}</span></div>', unsafe_allow_html=True)
+status_class = "status-pill used" if locked else "status-pill"
+st.markdown(f'<div class="chat-heading"><div><div class="heading-kicker">YOUR STUDY WORKSPACE</div><strong>{html.escape(current_title)}</strong></div><span class="{status_class}">{status}</span></div>', unsafe_allow_html=True)
 if settings.demo:
-    st.caption("LOCAL PREVIEW · Curated offline examples, not Gemini responses. No sign-in or payments are made.")
+    st.markdown('<div class="mode-banner"><strong>Local preview</strong><span>Curated offline examples · Gemini and payments are disabled</span></div>', unsafe_allow_html=True)
 elif settings.billing_mode == "test":
-    st.caption("STRIPE SANDBOX · Test subscriptions only. No real payments.")
+    st.markdown('<div class="mode-banner"><strong>Stripe sandbox</strong><span>Test subscriptions only · No real payments</span></div>', unsafe_allow_html=True)
 
 starter_question = None
 if not messages:
-    hero()
+    hero(locked=locked)
+if not messages and not locked:
     with st.container(key="starters"):
         prompts = [
-            ("Work through a subnet", "Explain the network and broadcast addresses for 192.168.10.77/26.", "Find boundaries and usable hosts.", ":material/lan:"),
-            ("Troubleshoot OSPF", "Why might OSPF neighbors get stuck in ExStart?", "Reason through a neighbor problem.", ":material/hub:"),
-            ("Compare routing decisions", "Explain longest prefix match versus administrative distance.", "Understand which route wins.", ":material/alt_route:"),
-            ("Practice a switching scenario", "Give me an original CCNA practice scenario about STP root bridge election, with an answer and explanation.", "Put VLAN and STP knowledge to work.", ":material/account_tree:"),
+            ("Work through a subnet", "Explain the network and broadcast addresses for 192.168.10.77/26.", "Find boundaries and usable hosts.", "subnet", "IP", "IP ADDRESSING"),
+            ("Troubleshoot OSPF", "Why might OSPF neighbors get stuck in ExStart?", "Reason through a neighbor problem.", "ospf", "O", "TROUBLESHOOTING"),
+            ("Compare routing decisions", "Explain longest prefix match versus administrative distance.", "Understand which route wins.", "routing", "R", "ROUTING LOGIC"),
+            ("Practice a switching scenario", "Give me an original CCNA practice scenario about STP root bridge election, with an answer and explanation.", "Put VLAN and STP knowledge to work.", "switching", "S", "SCENARIO PRACTICE"),
         ]
         for row in range(2):
             columns = st.columns(2)
-            for column, (title, prompt, subtitle, icon) in zip(columns, prompts[row * 2:row * 2 + 2]):
+            for column, (title, prompt, subtitle, slug, symbol, category) in zip(columns, prompts[row * 2:row * 2 + 2]):
                 with column:
-                    with st.container(border=True):
-                        if st.button(title, key="starter-" + title, type="tertiary", icon=icon, width="stretch", disabled=disabled):
+                    with st.container(key="prompt-" + slug):
+                        st.markdown(f'<div class="card-top"><span class="card-icon">{symbol}</span><span class="card-topic">{category}</span></div>', unsafe_allow_html=True)
+                        if st.button(title, key="starter-" + title, type="tertiary", icon=":material/arrow_outward:", icon_position="right", width="stretch", disabled=disabled):
                             starter_question = prompt
                         st.caption(subtitle)
-    if not used:
+    if not used and not entitlement.active:
         st.markdown('<p class="small-note">Choose a starter or type your question below. Your first response is free.</p>', unsafe_allow_html=True)
 
 for message_number, message in enumerate(messages):
@@ -277,10 +420,16 @@ for message_number, message in enumerate(messages):
 
 if locked:
     with st.container(key="subscription_gate"):
-        st.subheader("Continue with CCNA Tutor")
-        st.write("Your first response is saved. Subscribe for **$9/month** to ask follow-up questions and start more conversations.")
-        st.caption(f"Up to {settings.daily_limit} prompts per day · Manage or cancel through Stripe")
-        checkout_button("main-checkout", "content")
+        details, action = st.columns([1.65, 1], gap="large")
+        with details:
+            st.markdown('<div class="gate-kicker">KEEP BUILDING YOUR UNDERSTANDING</div>', unsafe_allow_html=True)
+            st.subheader("Continue with CCNA Tutor")
+            st.write("You've used your free response. Unlock follow-up questions, fresh scenarios, and a study space that keeps your progress.")
+            st.markdown('<div class="gate-features"><span>Step-by-step explanations</span><span>Original practice scenarios</span><span>Saved chats & references</span></div>', unsafe_allow_html=True)
+        with action:
+            st.markdown('<div class="gate-price">$9<span> / month</span></div>', unsafe_allow_html=True)
+            checkout_button("main-checkout")
+            st.caption(f"Up to {settings.daily_limit} prompts per day · Cancel anytime")
         if settings.demo:
             st.caption("The subscription gate is shown for testing. To try the interface again, use “Restart local preview” in the sidebar.")
         else:
@@ -294,7 +443,7 @@ notice = st.session_state.pop("chat_notice", None)
 if notice:
     st.warning(notice)
 
-placeholder = "Subscribe to continue the conversation" if locked else "Ask CCNA Tutor anything about the six supported topics…"
+placeholder = "Subscribe to continue the conversation" if locked else "Ask a CCNA question or describe a network problem…"
 question = st.chat_input(placeholder, max_chars=1200, disabled=disabled, key="composer") or starter_question
 if question:
     active_conversation = conversation_id or str(uuid.uuid4())
